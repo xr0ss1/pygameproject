@@ -9,21 +9,21 @@ scene_w=2560
 scene_h=1280
 cam_w=640
 cam_h=320
-FPS=30
+FPS=60
 death=0
 mouse_down=0
 from obj_classes import Player,Bullet,Camera,HUD,Zombie
 sc=pygame.display.set_mode((W,H))
-pygame.display.set_caption('бимбим бамбам')
+pygame.display.set_caption('zomb survive')
 #pygame.display.set_icon(pygame.image.load('name'))
 pygame.draw.rect(sc,(255,255,255),(10,10,50,100))
 GEnable=True
-key_events={'key_left':False,'key_right':False,'key_up':False,'key_down':False,'key_1':False,'key_2':False}#задаем проверки которые используем
-key_events_check={'key_left':pygame.K_a,'key_right':pygame.K_d,'key_up':pygame.K_w,'key_down':pygame.K_s,'key_1':pygame.K_1,'key_2':pygame.K_2} #назначаем клавиши
+key_events={'key_r':False,'key_left':False,'key_right':False,'key_up':False,'key_down':False,'key_1':False,'key_2':False}#задаем проверки которые используем
+key_events_check={'key_r':pygame.K_r,'key_left':pygame.K_a,'key_right':pygame.K_d,'key_up':pygame.K_w,'key_down':pygame.K_s,'key_1':pygame.K_1,'key_2':pygame.K_2} #назначаем клавиши
 
 tt=pygame.font.Font(None, 64)
 text_test=tt.render('1232',True,(255,255,255))
-wave_text=tt.render('12312312',True,(255,255,255))
+wave_text=tt.render('Выживите пока вас не спасут',True,(255,255,255))
 
 background=pygame.image.load('sprites/background.png').convert_alpha()
 background_shadow=pygame.image.load('sprites/background_shadow.png').convert_alpha()
@@ -42,16 +42,18 @@ music=pygame.mixer.music.load("sound/back_m.mp3")
 pygame.mixer.music.play(-1)
 s_shot= pygame.mixer.Sound("sound/shot.mp3")
 s_rel= pygame.mixer.Sound("sound/reload.wav")
+s_zomb=[pygame.mixer.Sound("sound/zomb1.wav"),pygame.mixer.Sound("sound/zomb2.wav"),pygame.mixer.Sound("sound/zomb3.wav")]
+s_hit=[pygame.mixer.Sound("sound/hit.wav"),pygame.mixer.Sound("sound/hit1.wav")]
 zones_list=[[(0,2560),(-50,-50)],[(0,2560),(1400,1400)],[(-50,-50),(0,1280)],[(2610,2610),(0,1280)]]
-waves=2
+waves=5
 cur_wave=0
 wave_data=[]
 wave_data.append({'count':10,'min':10,'max':30,'maxzomb':3,'cnt':5})
 wave_data.append({'count':20,'min':20,'max':30,'maxzomb':5,'cnt':7})
 wave_data.append({'count':25,'min':30,'max':30,'maxzomb':7,'cnt':9})
-wave_data.append({'count':30,'min':100,'max':250,'maxzomb':10,'cnt':15})
-wave_data.append({'count':30,'min':50,'max':150,'maxzomb':15,'cnt':30})
-wave_data.append({'count':30,'min':50,'max':150,'maxzomb':15,'cnt':30})
+wave_data.append({'count':30,'min':100,'max':250,'maxzomb':8,'cnt':15})
+wave_data.append({'count':30,'min':80,'max':200,'maxzomb':9,'cnt':20})
+wave_data.append({'count':30,'min':70,'max':150,'maxzomb':10,'cnt':20})
 wave_timer=random.randint(150,300)
 print(wave_timer)
 
@@ -108,7 +110,7 @@ ss.fill((0,0,0))                         # notice the alpha value in the color
 hs =pygame.Surface((1280,640))
 hs.fill((150,0,0))
 
-b_a=0
+b_a=255
 while GEnable:
 	if hero.hp<=0:
 		death=1
@@ -155,12 +157,15 @@ while GEnable:
 						j.rect.y-=1
 				
 				
-			i.update(cam,hero,bul_list,zomb_list)
+			i.update(cam,hero,bul_list,zomb_list,s_hit)
 			i.draw(sc,cam)
-	sc.blit(text_test,(15,H-20))
-	sc.blit(wave_text,(cam_w-100,cam_h+100))
+	#sc.blit(text_test,(15,H-20))
+	sc.blit(wave_text,(cam_w-70,cam_h+100))
 	ss.set_alpha(b_a)
 	hs.set_alpha((100-hero.hp)/150*255)
+	if ending==0:
+		if b_a>64:
+			b_a-=.5
 	if b_a>=255:
 		GEnable=False
 	sc.blit(hs,(0,0))
@@ -175,14 +180,17 @@ while GEnable:
 		wave_timer=random.randint(wave_data[cur_wave]['min'],wave_data[cur_wave]['max'])
 		if cam.zomb_cnt<wave_data[cur_wave]['maxzomb'] and zomb_created<wave_data[cur_wave]['cnt']:
 			cam.zomb_cnt+=1
-			zomb_list.append(Zombie(xx,yy,cam))
+			zomb_list.append(Zombie(xx,yy,cam,cur_wave))
 			zomb_created+=1
 			print('zombie on',xx,yy)
+			a=random.randint(0,2)
+			s_zomb[a].play()
 			wave_text=tt.render('',True,(255,255,255))
 		if (cam.zomb_cnt==0) and (zomb_created>=wave_data[cur_wave]['cnt']):
 			if cur_wave<waves:
 				#new wave
 				cur_wave+=1
+				hero.hp+=15
 				zomb_created=0
 				wave_timer=500
 				print('wave',cur_wave)
@@ -217,6 +225,7 @@ while GEnable:
 			bul_list.append(Bullet(hero.cur_gun,hero.rect.centerx,hero.rect.centery,mouse_x,mouse_y,cam,bul_list,hero.guns))		
 			hero.can_shoot=0
 			hero.cur_ammo-=1
+			hero.gammo[hero.cur_gun]=hero.cur_ammo
 			s_shot.play()
 		
 	check_events()
