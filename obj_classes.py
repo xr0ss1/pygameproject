@@ -1,5 +1,8 @@
 import pygame
 import math
+import random
+
+
 class Player(pygame.sprite.Sprite):
 	def create_anim(self,filename,n,ind):
 		for i in range(0,n):
@@ -20,10 +23,27 @@ class Player(pygame.sprite.Sprite):
 			
 	def init_guns(self):
 			self.guns=[]
-			self.guns.append([pygame.image.load('sprites/pl_pistol.png').convert_alpha(),20,100,7,300]		)
+			self.guns.append([pygame.image.load('sprites/pl_pistol.png').convert_alpha(),7,50,7,300,20]		) # 2- shoot timer 3 - ammo count 4 - reload timer 5 - bullet speed
+			self.guns.append([pygame.image.load('sprites/pl_auto.png').convert_alpha(),7,15,20,300,20]		) # 2- shoot timer 3 - ammo count 4 - reload timer 5 - bullet speed
+	
+	def switch_gun(self,_id):
+		self.cur_gun=_id
+		
+		self.gun_image=self.guns[self.cur_gun][0]
+		self.gun_rect=self.gun_image.get_rect(center=self.rect.center)
+		self.rot_image=pygame.transform.rotate(self.gun_image,0)
+		
+		
+		self.can_shoot=0
+		self.gun_timer=self.guns[self.cur_gun][2]
+		self.max_ammo=self.guns[self.cur_gun][3]
+		self.cur_ammo=0
+		self.bul_sp=self.guns[self.cur_gun][5]
+		self.reload_timer=self.guns[self.cur_gun][4]
 			
 	def __init__(self,cam):
 		
+		self.hp=100
 		self.move_check=[0,0,0,0]
 		self.anim_list={'move':[],'stand':[]}
 		self.create_anim('sprites/pl_walk',6,'stand')
@@ -64,6 +84,7 @@ class Player(pygame.sprite.Sprite):
 		self.gun_timer=self.guns[self.cur_gun][2]
 		self.max_ammo=self.guns[self.cur_gun][3]
 		self.cur_ammo=self.max_ammo
+		self.bul_sp=self.guns[self.cur_gun][5]
 		self.reload_timer=self.guns[self.cur_gun][4]
 	def rotate(self,cam):
 		mouse_x,mouse_y=pygame.mouse.get_pos()
@@ -93,7 +114,7 @@ class Player(pygame.sprite.Sprite):
 		self.move_check[args[0]]=1
 		self.change_anim('move')
 	
-	def shoot_timer(self):
+	def shoot_timer(self,snd):
 		if self.can_shoot==0:
 			self.gun_timer-=1
 			
@@ -104,7 +125,8 @@ class Player(pygame.sprite.Sprite):
 				
 				self.gun_timer=self.guns[self.cur_gun][2]
 			if self.cur_ammo<=0:
-				
+				if self.reload_timer==self.guns[self.cur_gun][4]:
+					snd.play()
 				self.reload_timer-=1
 				if self.reload_timer<=0:
 				
@@ -134,8 +156,8 @@ class Player(pygame.sprite.Sprite):
 		dy=self.rect.y+int(math.sin(rad)*30)
 		#pygame.draw.line(par, (255,255,255), [],[dx,dy], 3)
 	
-	def update(self,k_p,cam):
-		self.shoot_timer()
+	def update(self,k_p,cam,snd):
+		self.shoot_timer(snd)
 		self.image=self.images[self.cur_img]
 		self.anim_check(k_p)
 		self.rotate(cam)
@@ -188,23 +210,43 @@ class Player(pygame.sprite.Sprite):
 		
 class Bullet(pygame.sprite.Sprite):
 	def __init__(self,*args):
-		self.btype=[['sprites/bul1.png',20],['sprites/bul2.png',10]]
+		self.btype=[['sprites/bul1.png'],['sprites/bul2.png']]
 		cam=args[5]
+		self.tp=args[0]
+		self.hp=2
+		self.list=args[6]
+		self.guns_list=args[7]
 		self.image=pygame.image.load(self.btype[args[0]][0]).convert_alpha()
 		self.rect = self.image.get_rect(center=(args[1]-cam.plpos[0],args[2]-cam.plpos[1]))
 		self.xx=args[3]
 		self.yy=args[4]
-		self.speed=self.btype[args[0]][1]
+		self.speed=self.guns_list[args[0]][5]
 		gip=((self.xx-self.rect.x)**2+(self.yy-self.rect.y)**2)**(1/2)
 		d_gip=self.speed/gip
 		self.dx=(self.xx-self.rect.x)*d_gip
 		self.dy=(self.yy-self.rect.y)*d_gip
+		rel_y=self.xx-(args[0]-cam.plpos[0])
+		rel_x=self.xx-(args[1]-cam.plpos[1])
+		self.angle=(180/math.pi)*(-math.atan2(rel_y,rel_x))
+		self.image=pygame.transform.rotate(self.image,0)
+		self.rect=self.image.get_rect(center=self.rect.center)
+		self.active=1
 		
-	def draw(self,par):
-		par.blit(self.image,self.rect)
+	def draw(self,par,cam):
+		if self.active==1:
+			par.blit(self.image,self.rect)
+	def destroy(self):
+		self.list.remove(self)
+		self.active=0
+		print('minus bullet')
 	def update(self):
-		self.rect.x+=self.dx
-		self.rect.y+=self.dy
+		if self.active==1:
+			self.rect.x+=self.dx
+			self.rect.y+=self.dy
+		if abs(self.rect.x)>2560 or abs(self.rect.y>1280):
+			self.destroy()	
+			print('123')
+		
 
 class Camera(pygame.sprite.Sprite):
 	def __init__(self,x,y,w,h,cw,ch):
@@ -216,8 +258,9 @@ class Camera(pygame.sprite.Sprite):
 		self.plpos=[0,0]
 		self.statex='free'
 		self.statey='free'
+		self.zomb_cnt=0
 	def move(self,x,y):
-		print(self.rect[0],self.rect[1],x,y)
+		
 		if self.statex=='free':
 			self.rect[0]+=x
 			if (x>0 and self.rect[0]>=0) or (x<0 and self.rect[0]<-(self.cw-1280)+self.plpos[1]):
@@ -253,7 +296,12 @@ class HUD(pygame.sprite.Sprite):
 class Zombie(pygame.sprite.Sprite):
 	def __init__(self,x,y,cam):
 		
-		self.image=pygame.image.load('sprites/zombie.png').convert_alpha()
+		self.idle=pygame.image.load('sprites/zombie.png').convert_alpha()
+		self.image=self.idle
+		self.hit=[]
+		self.hp=2
+		self.hit.append(pygame.image.load('sprites/zombiehit1.png').convert_alpha())
+		self.hit.append(pygame.image.load('sprites/zombiehit2.png').convert_alpha())
 		self.rect=self.image.get_rect(center=(x,y))
 		self.speed=1
 		rel_y=cam.rect.centerx-x
@@ -262,29 +310,63 @@ class Zombie(pygame.sprite.Sprite):
 		self.rot_image=pygame.transform.rotate(self.image,self.angle)
 		self.rot_rect=self.image.get_rect(center=(self.rect.centerx,self.rect.centery))
 		self.target=cam
+		self.active=1
+		self.timer=40
 	def draw(self,par,cam):
-		pygame.draw.circle(par,(150,0,0),(self.rot_rect.center[0]+cam.rect.x,self.rot_rect.center[1]+cam.rect.y),25)
-		par.blit(self.rot_image,(self.rot_rect.x+cam.rect.x,self.rot_rect.y+cam.rect.y))
+		if self.active==1:
+			pygame.draw.circle(par,(150,0,0),(self.rot_rect.center[0]+cam.rect.x,self.rot_rect.center[1]+cam.rect.y),25)
+			par.blit(self.rot_image,(self.rot_rect.x+cam.rect.x,self.rot_rect.y+cam.rect.y))
 		
 	
 	def rotation(self,cam):
-		rel_y=abs(cam.w-cam.rect.x-cam.plpos[0])-self.rect.centerx
-		rel_x=abs(cam.h-cam.rect.y-cam.plpos[1])-self.rect.centery
-		self.angle=-(180/math.pi)*(-math.atan2(rel_y,rel_x))-90
+		if self.active==1:
+			rel_y=abs(cam.w-cam.rect.x-cam.plpos[0])-self.rect.centerx
+			rel_x=abs(cam.h-cam.rect.y-cam.plpos[1])-self.rect.centery
+			self.angle=-(180/math.pi)*(-math.atan2(rel_y,rel_x))-90
 		
-		self.rot_image=pygame.transform.rotate(self.image,self.angle)
-		self.rot_rect=self.image.get_rect(center=(self.rect.centerx,self.rect.centery))
+			self.rot_image=pygame.transform.rotate(self.image,self.angle)
+			self.rot_rect=self.image.get_rect(center=(self.rect.centerx,self.rect.centery))
 	
 	def move(self):
-		dx=math.cos(math.radians(self.angle))*self.speed*2
-		dy=math.sin(math.radians(self.angle))*self.speed*2
-		self.rect.x+=dx
-		self.rect.y-=dy
+		if self.active==1:
+			dx=math.cos(math.radians(self.angle))*self.speed*2
+			dy=math.sin(math.radians(self.angle))*self.speed*2
+			self.rect.x+=dx
+			self.rect.y-=dy
 		
+	def col_bul(self):
+		pass
 	
-	def update(self,cam,hero):
-		self.rotation(cam)
-		self.move()
+	def destroy(self,_list,i,cam):
+		
+		if self.rect.collidepoint((i.rect.centerx-cam.rect.x,i.rect.centery-cam.rect.y)) and i.active==1:
+			self.hp-=(2-i.tp)
+			if self.hp<=0:
+				_list.remove(self)
+				self.active=0
+				global zomb_cnt
+				cam.zomb_cnt-=1
+			
+			i.destroy()
+	
+	def update(self,cam,hero,blist,_list):
+		if self.active==1:
+			self.rotation(cam)
+			self.move()
+			if self.rect.collidepoint((cam.w-cam.rect.x-cam.plpos[0],cam.h-cam.rect.y-cam.plpos[1])):
+				self.timer-=1
+				if self.timer<=0:
+					self.image=self.hit[random.randint(0,1)]
+					self.timer=50
+					hero.hp-=10
+			else:
+				self.image=self.idle
+			for i in blist:
+				
+				self.destroy(_list,i,cam)
+				
+		
+		
 		
 	
 
