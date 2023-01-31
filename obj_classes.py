@@ -42,6 +42,7 @@ class Player(pygame.sprite.Sprite):
 
     def __init__(self, cam):
         self.gammo = [7, 20]
+        self.score=0
         self.hp = 100
         self.move_check = [0, 0, 0, 0]
         self.anim_list = {'move': [], 'stand': []}
@@ -268,6 +269,7 @@ class Camera(pygame.sprite.Sprite):
         self.statex = 'free'
         self.statey = 'free'
         self.zomb_cnt = 0
+        self.score=0
 
     def move(self, x, y):
 
@@ -359,6 +361,7 @@ class Zombie(pygame.sprite.Sprite):
                 self.active = 0
                 global zomb_cnt
                 cam.zomb_cnt -= 1
+                cam.score+=1
                 a = random.randint(0, 1)
                 snd[a].play()
             i.destroy()

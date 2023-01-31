@@ -3,6 +3,30 @@ import pygame
 import math
 import random
 
+state='menu'
+
+def restart_game():
+	global death,mouse_down,bul_list,zomb_list,cam,hud,hero,heli_rect,waves,cur_wave,wave_timer,zomb_created,ending,bems,b_a
+	death = 0
+	mouse_down = 0
+	for i in bul_list:
+		if i.active==1:
+			i.destroy()
+	for i in zomb_list:
+		if i.active==1:
+			i.active=0
+	cam = Camera(0, 0, cam_w, cam_h, scene_w, scene_h)
+	hud = HUD()
+	hero = Player(cam)
+	heli_rect = heli_img.get_rect(center=(1280, -200))
+	waves = 5
+	cur_wave = 0
+	wave_timer = random.randint(150, 300)
+	zomb_created = 0
+	ending = 0
+	bems = 0
+	b_a = 250
+	wave_text = tt.render('Выживите пока вас не спасут', True, (255, 255, 255))
 pygame.init()
 pygame.font.init()
 W = 1280
@@ -31,6 +55,9 @@ wave_text = tt.render('Выживите пока вас не спасут', True
 
 background = pygame.image.load('sprites/background.png').convert_alpha()
 background_shadow = pygame.image.load('sprites/background_shadow.png').convert_alpha()
+
+menu_img=pygame.image.load('sprites/img_menu.png').convert_alpha()
+
 back_rect = background.get_rect(topleft=(0, 0))
 back_rect1 = background.get_rect(topleft=(1280, 0))
 back_rect2 = background.get_rect(topleft=(0, 640))
@@ -117,122 +144,140 @@ hs.fill((150, 0, 0))
 
 b_a = 255
 while GEnable:
-    if hero.hp <= 0:
-        death = 1
-        ending = 1
-    sc.fill((0, 0, 0))
-    sc.blit(background, (back_rect.x + cam.rect.x, back_rect.y + cam.rect.y))
-    sc.blit(background, (back_rect1.x + cam.rect.x, back_rect1.y + cam.rect.y))
-    sc.blit(background, (back_rect2.x + cam.rect.x, back_rect2.y + cam.rect.y))
-    sc.blit(background, (back_rect3.x + cam.rect.x, back_rect3.y + cam.rect.y))
-    sc.blit(background_shadow, (back_rect.x + cam.rect.x, back_rect.y + cam.rect.y))
-    bems += 25
-    top = pygame.transform.rotate(heli_top, bems)
-    heli_rect2 = top.get_rect(center=heli_rect.center)
+	if state=='game':
+		if hero.hp <= 0:
+			death = 1
+			ending = 1
+		sc.fill((0, 0, 0))
+		sc.blit(background, (back_rect.x + cam.rect.x, back_rect.y + cam.rect.y))
+		sc.blit(background, (back_rect1.x + cam.rect.x, back_rect1.y + cam.rect.y))
+		sc.blit(background, (back_rect2.x + cam.rect.x, back_rect2.y + cam.rect.y))
+		sc.blit(background, (back_rect3.x + cam.rect.x, back_rect3.y + cam.rect.y))
+		sc.blit(background_shadow, (back_rect.x + cam.rect.x, back_rect.y + cam.rect.y))
+		bems += 25
+		top = pygame.transform.rotate(heli_top, bems)
+		heli_rect2 = top.get_rect(center=heli_rect.center)
 
-    hero.draw(sc, cam)
-    sc.blit(heli_img, (heli_rect.x + cam.rect.x, heli_rect.y + cam.rect.y))
-    sc.blit(top, (heli_rect2.x + cam.rect.x, heli_rect2.y + cam.rect.y))
+		hero.draw(sc, cam)
+		sc.blit(heli_img, (heli_rect.x + cam.rect.x, heli_rect.y + cam.rect.y))
+		sc.blit(top, (heli_rect2.x + cam.rect.x, heli_rect2.y + cam.rect.y))
 
-    hud.init_bul(sc, hero, cam)
-    mx, my = pygame.mouse.get_pos()
-    text_test = tt.render(str(cam.zomb_cnt) + ' ' + str(zomb_created) + ' ' + str(cur_wave), True, (255, 255, 255))
-    if len(bul_list) > 0:
-        for i in bul_list:
-            i.update()
-            i.draw(sc, cam)
-    if len(zomb_list) > 0:
-        for i in zomb_list:
-            for j in zomb_list:
-                if abs(j.rect.x - i.rect.x) < 30:
-                    mn = min(i.rect.x, j.rect.x)
-                    if i.rect.x == mn:
-                        i.rect.x -= 1
-                        j.rect.x += 1
-                    else:
-                        i.rect.x += 1
-                        j.rect.x -= 1
-                if abs(j.rect.y - i.rect.y) < 40:
-                    mn = min(i.rect.y, j.rect.y)
-                    if i.rect.y == mn:
-                        i.rect.y -= 1
-                        j.rect.y += 1
-                    else:
-                        i.rect.y += 1
-                        j.rect.y -= 1
+		hud.init_bul(sc, hero, cam)
+		mx, my = pygame.mouse.get_pos()
+		text_test = tt.render(str(cam.zomb_cnt) + ' ' + str(zomb_created) + ' ' + str(cur_wave), True, (255, 255, 255))
+		if len(bul_list) > 0:
+			for i in bul_list:
+				i.update()
+				i.draw(sc, cam)
+		if len(zomb_list) > 0:
+			for i in zomb_list:
+				for j in zomb_list:
+					if abs(j.rect.x - i.rect.x) < 30:
+						mn = min(i.rect.x, j.rect.x)
+						if i.rect.x == mn:
+							i.rect.x -= 1
+							j.rect.x += 1
+						else:
+							i.rect.x += 1
+							j.rect.x -= 1
+					if abs(j.rect.y - i.rect.y) < 40:
+						mn = min(i.rect.y, j.rect.y)
+						if i.rect.y == mn:
+							i.rect.y -= 1
+							j.rect.y += 1
+						else:
+							i.rect.y += 1
+							j.rect.y -= 1
 
-            i.update(cam, hero, bul_list, zomb_list, s_hit)
-            i.draw(sc, cam)
-    # sc.blit(text_test,(15,H-20))
-    sc.blit(wave_text, (cam_w - 70, cam_h + 100))
-    ss.set_alpha(b_a)
-    hs.set_alpha((100 - hero.hp) / 150 * 255)
-    if ending == 0:
-        if b_a > 64:
-            b_a -= .5
-    if b_a >= 255:
-        GEnable = False
-    sc.blit(hs, (0, 0))
-    sc.blit(ss, (0, 0))
-    pygame.display.update()
-    wave_timer -= 1
-    if wave_timer <= 0:
-        spawn_point = random.randint(0, 3)
-        xx = random.randint(zones_list[spawn_point][0][0], zones_list[spawn_point][0][1])
-        yy = random.randint(zones_list[spawn_point][1][0], zones_list[spawn_point][1][1])
-        print(xx, yy)
-        wave_timer = random.randint(wave_data[cur_wave]['min'], wave_data[cur_wave]['max'])
-        if cam.zomb_cnt < wave_data[cur_wave]['maxzomb'] and zomb_created < wave_data[cur_wave]['cnt']:
-            cam.zomb_cnt += 1
-            zomb_list.append(Zombie(xx, yy, cam, cur_wave))
-            zomb_created += 1
-            print('zombie on', xx, yy)
-            a = random.randint(0, 2)
-            s_zomb[a].play()
-            wave_text = tt.render('', True, (255, 255, 255))
-        if (cam.zomb_cnt == 0) and (zomb_created >= wave_data[cur_wave]['cnt']):
-            if cur_wave < waves:
-                # new wave
-                cur_wave += 1
-                hero.hp += 15
-                zomb_created = 0
-                wave_timer = 500
-                print('wave', cur_wave)
-                wave_text = tt.render('WAVE ' + str(cur_wave), True, (255, 255, 255))
-            else:
-                ending = 1
-    if ending == 1:
-        if death == 0:
-            heli_rect.x += ((hero.rect.centerx - cam.rect.x - (cam.plpos[0])) - heli_rect.x) / 100
-            heli_rect.y += ((hero.rect.centery - cam.rect.y - (cam.plpos[1])) - heli_rect.y) / 100
-        b_a += 1
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            GEnable = False
-        if event.type == pygame.KEYDOWN:
-            for i in key_events:
-                if event.key == key_events_check[i]:
-                    key_events[i] = True
-        if event.type == pygame.KEYUP:
-            for i in key_events:
-                if event.key == key_events_check[i]:
-                    key_events[i] = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_down = 1
-        if event.type == pygame.MOUSEBUTTONUP:
-            mouse_down = 0
-        if event.type == pygame.MOUSEMOTION:
-            pass
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    if mouse_down == 1:
-        if hero.can_shoot == 1:
-            bul_list.append(
-                Bullet(hero.cur_gun, hero.rect.centerx, hero.rect.centery, mouse_x, mouse_y, cam, bul_list, hero.guns))
-            hero.can_shoot = 0
-            hero.cur_ammo -= 1
-            hero.gammo[hero.cur_gun] = hero.cur_ammo
-            s_shot.play()
+				i.update(cam, hero, bul_list, zomb_list, s_hit)
+				i.draw(sc, cam)
+		# sc.blit(text_test,(15,H-20))
+		sc.blit(wave_text, (cam_w - 70, cam_h + 100))
+		ss.set_alpha(b_a)
+		hs.set_alpha((100 - hero.hp) / 150 * 255)
+		if ending == 0:
+			if b_a > 64:
+				b_a -= .5
+		if b_a >= 255:
+			state=='death'
+			
+		sc.blit(hs, (0, 0))
+		sc.blit(ss, (0, 0))
+		
+		
+		
+		
+		wave_timer -= 1
+		if wave_timer <= 0:
+			spawn_point = random.randint(0, 3)
+			xx = random.randint(zones_list[spawn_point][0][0], zones_list[spawn_point][0][1])
+			yy = random.randint(zones_list[spawn_point][1][0], zones_list[spawn_point][1][1])
+			print(xx, yy)
+			wave_timer = random.randint(wave_data[cur_wave]['min'], wave_data[cur_wave]['max'])
+			if cam.zomb_cnt < wave_data[cur_wave]['maxzomb'] and zomb_created < wave_data[cur_wave]['cnt']:
+				cam.zomb_cnt += 1
+				zomb_list.append(Zombie(xx, yy, cam, cur_wave))
+				zomb_created += 1
+				print('zombie on', xx, yy)
+				a = random.randint(0, 2)
+				s_zomb[a].play()
+				wave_text = tt.render('', True, (255, 255, 255))
+			if (cam.zomb_cnt == 0) and (zomb_created >= wave_data[cur_wave]['cnt']):
+				if cur_wave < waves:
+					# new wave
+					cur_wave += 1
+					hero.hp += 15
+					zomb_created = 0
+					wave_timer = 500
+					print('wave', cur_wave)
+					wave_text = tt.render('WAVE ' + str(cur_wave), True, (255, 255, 255))
+				else:
+					ending = 1
+		if ending == 1:
+			if death == 0:
+				heli_rect.x += ((hero.rect.centerx - cam.rect.x - (cam.plpos[0])) - heli_rect.x) / 100
+				heli_rect.y += ((hero.rect.centery - cam.rect.y - (cam.plpos[1])) - heli_rect.y) / 100
+			b_a += 1
+	for event in pygame.event.get():
+		if event.type == pygame.QUIT:
+			GEnable = False
+		if event.type == pygame.KEYDOWN:
+			for i in key_events:
+				if event.key == key_events_check[i]:
+					key_events[i] = True
+		if event.type == pygame.KEYUP:
+			for i in key_events:
+				if event.key == key_events_check[i]:
+					key_events[i] = False
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			mouse_down = 1
+		if event.type == pygame.MOUSEBUTTONUP:
+			mouse_down = 0
+		if event.type == pygame.MOUSEMOTION:
+			pass
+	mouse_x, mouse_y = pygame.mouse.get_pos()
+	if mouse_down == 1:
+		
+		if state=='menu':
+			state='game'
+		if hero.can_shoot == 1 and state=='game' and b_a<230:
+			bul_list.append(
+				Bullet(hero.cur_gun, hero.rect.centerx, hero.rect.centery, mouse_x, mouse_y, cam, bul_list, hero.guns))
+			hero.can_shoot = 0
+			hero.cur_ammo -= 1
+			hero.gammo[hero.cur_gun] = hero.cur_ammo
+			s_shot.play()
+		if state=='death':
+			restart_game()
+			state='game'
 
-    check_events()
-    hero.update(key_events, cam, s_rel)
-    clock.tick(FPS)
+	check_events()
+	hero.update(key_events, cam, s_rel)
+	if state=='menu':
+		menu_img.set_alpha(255)
+	else:
+		menu_img.set_alpha(0)
+	
+	sc.blit(menu_img,(0,0))
+	pygame.display.update()
+	clock.tick(FPS)
