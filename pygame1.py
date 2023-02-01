@@ -5,6 +5,8 @@ import random
 
 state='menu'
 
+
+
 def restart_game():
 	global death,mouse_down,bul_list,zomb_list,cam,hud,hero,heli_rect,waves,cur_wave,wave_timer,zomb_created,ending,bems,b_a
 	death = 0
@@ -45,18 +47,18 @@ pygame.display.set_caption('zomb survive')
 pygame.draw.rect(sc, (255, 255, 255), (10, 10, 50, 100))
 GEnable = True
 key_events = {'key_r': False, 'key_left': False, 'key_right': False, 'key_up': False, 'key_down': False, 'key_1': False,
-              'key_2': False}  # задаем проверки которые используем
+              'key_2': False, 'key_esc': False}  # задаем проверки которые используем
 key_events_check = {'key_r': pygame.K_r, 'key_left': pygame.K_a, 'key_right': pygame.K_d, 'key_up': pygame.K_w,
-                    'key_down': pygame.K_s, 'key_1': pygame.K_1, 'key_2': pygame.K_2}  # назначаем клавиши
+                    'key_down': pygame.K_s, 'key_1': pygame.K_1, 'key_2': pygame.K_2, 'key_esc':pygame.K_ESCAPE }  # назначаем клавиши
 
 tt = pygame.font.Font(None, 64)
+lt = pygame.font.Font(None, 32)
+llt = pygame.font.Font(None, 16)
 text_test = tt.render('1232', True, (255, 255, 255))
 wave_text = tt.render('Выживите пока вас не спасут', True, (255, 255, 255))
 
 background = pygame.image.load('sprites/background.png').convert_alpha()
 background_shadow = pygame.image.load('sprites/background_shadow.png').convert_alpha()
-
-menu_img=pygame.image.load('sprites/img_menu.png').convert_alpha()
 
 back_rect = background.get_rect(topleft=(0, 0))
 back_rect1 = background.get_rect(topleft=(1280, 0))
@@ -106,22 +108,23 @@ def heli_move(x, y):
     heli_rect.y += y
 
 
-def check_events():
-    if key_events['key_left']:
-        hero.move(0)
+def check_events(stt):
+	if key_events['key_left']:
+		hero.move(0)
 
-    if key_events['key_right']:
-        hero.move(2)
+	if key_events['key_right']:
+		hero.move(2)
 
-    if key_events['key_up']:
-        hero.move(1)
+	if key_events['key_up']:
+		hero.move(1)
 
-    if key_events['key_down']:
-        hero.move(3)
-    if key_events['key_1']:
-        hero.switch_gun(0)
-    if key_events['key_2']:
-        hero.switch_gun(1)
+	if key_events['key_down']:
+		hero.move(3)
+	if key_events['key_1']:
+		hero.switch_gun(0)
+	if key_events['key_2']:
+		hero.switch_gun(1)
+		
 
 
 def col_player():
@@ -141,8 +144,10 @@ ss = pygame.Surface((1280, 640))  # per-pixel alpha
 ss.fill((0, 0, 0))  # notice the alpha value in the color
 hs = pygame.Surface((1280, 640))
 hs.fill((150, 0, 0))
-
 b_a = 255
+t_a=0
+t_am=1
+
 while GEnable:
 	if state=='game':
 		if hero.hp <= 0:
@@ -192,18 +197,19 @@ while GEnable:
 				i.update(cam, hero, bul_list, zomb_list, s_hit)
 				i.draw(sc, cam)
 		# sc.blit(text_test,(15,H-20))
-		sc.blit(wave_text, (cam_w - 70, cam_h + 100))
+		
 		ss.set_alpha(b_a)
 		hs.set_alpha((100 - hero.hp) / 150 * 255)
 		if ending == 0:
 			if b_a > 64:
 				b_a -= .5
-		if b_a >= 255:
-			state=='death'
+		if b_a >= 250 and death==1:
+			state='death'
 			
 		sc.blit(hs, (0, 0))
 		sc.blit(ss, (0, 0))
-		
+		wr=wave_text.get_rect(center=(cam_w, cam_h+30))
+		sc.blit(wave_text,wr)
 		
 		
 		
@@ -237,11 +243,21 @@ while GEnable:
 			if death == 0:
 				heli_rect.x += ((hero.rect.centerx - cam.rect.x - (cam.plpos[0])) - heli_rect.x) / 100
 				heli_rect.y += ((hero.rect.centery - cam.rect.y - (cam.plpos[1])) - heli_rect.y) / 100
+				if b_a>=250:
+					state='win'
 			b_a += 1
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			GEnable = False
 		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_ESCAPE:
+				
+				if state == 'menu':
+					GEnable = False
+					print('QUIIT')
+				else:
+					if state!='game':
+						state='menu'
 			for i in key_events:
 				if event.key == key_events_check[i]:
 					key_events[i] = True
@@ -260,6 +276,8 @@ while GEnable:
 		
 		if state=='menu':
 			state='game'
+			restart_game()
+			print(state)
 		if hero.can_shoot == 1 and state=='game' and b_a<230:
 			bul_list.append(
 				Bullet(hero.cur_gun, hero.rect.centerx, hero.rect.centery, mouse_x, mouse_y, cam, bul_list, hero.guns))
@@ -267,17 +285,56 @@ while GEnable:
 			hero.cur_ammo -= 1
 			hero.gammo[hero.cur_gun] = hero.cur_ammo
 			s_shot.play()
-		if state=='death':
+		if state=='death' or state=='win':
 			restart_game()
 			state='game'
 
-	check_events()
+	check_events(state)
 	hero.update(key_events, cam, s_rel)
-	if state=='menu':
-		menu_img.set_alpha(255)
-	else:
-		menu_img.set_alpha(0)
 	
-	sc.blit(menu_img,(0,0))
+	score_txt=lt.render('Убито зомби: '+str(cam.score),True,(255,255,255))
+	next_txt=lt.render('Кликните чтобы попробовать еще раз',True,(255,255,255))
+	nnext_txt=lt.render('Кликните чтобы начать',True,(255,255,255))
+	back_txt=llt.render('Нажмите ESC для выхода в меню',True,(255,255,255))
+	bback_txt=llt.render('Нажмите ESC для выхода',True,(255,255,255))
+	win_txt=lt.render('Победа!',True,(0,255,0))
+	lose_txt=lt.render('Вы не выжили...',True,(255,0,0))
+	menu_img=pygame.image.load('sprites/img_menu.png').convert_alpha()
+	
+	if t_am==1:
+			if t_a>=250:
+				t_am=-1
+	if t_am==-1:
+			if t_a<0:
+				t_am=1
+	t_a+=t_am*2
+	next_txt.set_alpha(t_a)
+	nnext_txt.set_alpha(t_a)
+	back_txt.set_alpha(t_a/2)
+	bback_txt.set_alpha(t_a/2)
+	
+	if state=='menu':
+		sc.blit(menu_img,(0,0))	
+		rect=nnext_txt.get_rect(center=(640,540))
+		sc.blit(nnext_txt,rect)
+		rect=bback_txt.get_rect(center=(640,600))
+		sc.blit(bback_txt,rect)	
+	if state=='death':
+		
+		rect=lose_txt.get_rect(center=(640,320))
+		sc.blit(lose_txt,rect)
+		
+		rect=score_txt.get_rect(center=(640,480))
+		sc.blit(score_txt,rect)
+	if state=='win':
+		rect=win_txt.get_rect(center=(640,320))
+		sc.blit(win_txt,rect)
+	if state!='game' and state!='menu':
+		rect=next_txt.get_rect(center=(640,540))
+		sc.blit(next_txt,rect)
+		rect=back_txt.get_rect(center=(640,600))
+		sc.blit(back_txt,rect)
+	#state_show=tt.render(state+' '+str(cam.score),True,(255,255,255))
+	#sc.blit(state_show,(0,0))
 	pygame.display.update()
 	clock.tick(FPS)
